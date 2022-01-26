@@ -19,6 +19,9 @@ function main() {
     attribute vec4 aVertexColor;
     attribute vec3 aVertexNormal;
 
+    uniform vec3 uLightWorldPosition;
+
+    uniform mat4 uWorld;
     uniform mat4 uNormalMatrix;
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
@@ -30,10 +33,14 @@ function main() {
     void main() {
         gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
         vColor = aVertexColor;
+
         // Apply lighting effect
+
         highp vec3 ambientLight = vec3(0, 0, 0); // 阴影颜色
         highp vec3 directionalLightColor = vec3(1, 1, 1); // 光源颜色
-        highp vec3 directionalVector = normalize(vec3(0, 0, 1)); // 光源位置
+        // 计算表面的世界坐标
+        vec3 surfaceWorldPosition = (uWorld * aVertexPosition).xyz;
+        highp vec3 directionalVector = normalize(uLightWorldPosition - surfaceWorldPosition); // 光源位置
         highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
         highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
         vLighting = ambientLight + (directionalLightColor * directional);
@@ -60,8 +67,9 @@ function main() {
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-            normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix')
-        },
+            normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+            worldLocation: gl.getUniformLocation(shaderProgram, "uWorld")
+        }
     };
 
     let buffer = initBuffers(gl);
@@ -398,6 +406,12 @@ function drawScene(gl, programInfo, buffers) {
         programInfo.uniformLocations.normalMatrix,
         false,
         normalMatrix);
+
+    const worldMatrix = mat4.create();
+
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.worldLocation, false,
+        worldMatrix);
   
     {
         const vertexCount = 36;
