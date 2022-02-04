@@ -13,46 +13,27 @@ function main() {
         return;
     }
 
-    // 顶点着色器位置
+    // 顶点位置
     const vsSource = `
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
-    attribute vec3 aVertexNormal;
-
-    uniform vec3 uLightWorldPosition;
-
-    uniform mat4 uWorld;
-    uniform mat4 uNormalMatrix;
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
-
-    varying highp vec3 vLighting;
 
     varying lowp vec4 vColor;
+
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uModelViewMatrix;
 
     void main() {
         gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
         vColor = aVertexColor;
-
-        // Apply lighting effect
-
-        highp vec3 ambientLight = vec3(0, 0, 0); // 阴影颜色
-        highp vec3 directionalLightColor = vec3(1, 1, 1); // 光源颜色
-        // 计算表面的世界坐标
-        vec3 surfaceWorldPosition = (uWorld * aVertexPosition).xyz;
-        highp vec3 directionalVector = normalize(uLightWorldPosition - surfaceWorldPosition); // 光源位置
-        highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-        highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-        vLighting = ambientLight + (directionalLightColor * directional);
     }`;
 
-    // 片段着色器 确定颜色
+    // 片段着色器 确定像素的颜色
     const fsSource = `
     varying lowp vec4 vColor;
-    varying highp vec3 vLighting;
     
     void main() {
-        gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+        gl_FragColor = vColor;
     }`;
 
     const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
@@ -61,15 +42,11 @@ function main() {
         program: shaderProgram,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-            vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
             vertexColor: gl.getAttribLocation(shaderProgram, "aVertexColor")
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-            normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
-            worldLocation: gl.getUniformLocation(shaderProgram, "uWorld"),
-            lightWorldPosition: gl.getUniformLocation(shaderProgram, "uLightWorldPosition")
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')
         }
     };
 
@@ -80,7 +57,7 @@ function main() {
     function render() {
         drawScene(gl, programInfo, buffer);
         squareRotation += 0.01;
-        // squareRotation = squareRotation % 360;
+        squareRotation = squareRotation % 360;
         requestAnimationFrame(render);
     }
 
@@ -89,6 +66,7 @@ function main() {
     // // 用上面指定的颜色清除缓冲区
     // gl.clear(gl.COLOR_BUFFER_BIT);
 };
+
 
 //  初始化着色器程序，让WebGL知道如何绘制我们的数据
 function initShaderProgram(gl, vsSource, fsSource) {
@@ -136,61 +114,59 @@ function loadShader(gl, type, source) {
     return shader;
 }
 
-
 function initBuffers(gl) {
     const positionBuffer = gl.createBuffer();
     let vertices = [
-        // front face
-        1.0, 1.0, 1.0, // 右上 x, y, z
-        -1.0, 1.0, 1.0, // 左上 x, y, z
-        1.0, -1.0, 1.0, // 右下 x, y, z
-        -1.0, -1.0, 1.0, // 左下 x, y, z
-        // left face
-        -1.0, 1.0, 1.0,
-        -1.0, 1.0, -1.0,
-        -1.0, -1.0, 1.0,
-        -1.0, -1.0, -1.0,
-        // right face
-        1.0, 1.0, -1.0,
-        1.0, 1.0, 1.0,
-        1.0, -1.0, -1.0,
-        1.0, -1.0, 1.0,
-        // top face
-        1.0, 1.0, -1.0,
-        -1.0, 1.0, -1.0,
-        1.0, 1.0, 1.0,
-        -1.0, 1.0, 1.0,
-        // bottom face
-        1.0, -1.0, 1.0,
-        -1.0, -1.0, 1.0,
-        1.0, -1.0, -1.0,
-        -1.0, -1.0, -1.0,
-        // back face
-        -1.0, 1.0, -1.0,
-        1.0, 1.0, -1.0,
-        -1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0
+        // 前面
+        1.0, 1.0, 1.0,    // 右上 x, y, z
+        -1.0, 1.0, 1.0,   // 左上 x, y, z
+        1.0, -1.0, 1.0,   // 右下 x, y, z
+        -1.0, -1.0, 1.0,  // 左下 x, y, z
+        // 左面
+        -1.0, 1.0, 1.0,   // 右上 x, y, z
+        -1.0, 1.0, -1.0,  // 左上 x, y, z
+        -1.0, -1.0, 1.0,  // 右下 x, y, z
+        -1.0, -1.0, -1.0, // 左下 x, y, z
+        // 右面
+        1.0, 1.0, -1.0,   // 右上 x, y, z
+        1.0, 1.0, 1.0,    // 左上 x, y, z
+        1.0, -1.0, -1.0,  // 右下 x, y, z
+        1.0, -1.0, 1.0,   // 左下 x, y, z
+        // 顶面
+        1.0, 1.0, -1.0,   // 右上 x, y, z
+        -1.0, 1.0, -1.0,  // 左上 x, y, z
+        1.0, 1.0, 1.0,    // 右下 x, y, z
+        -1.0, 1.0, 1.0,   // 左下 x, y, z
+        // 底面
+        1.0, -1.0, 1.0,   // 右上 x, y, z
+        -1.0, -1.0, 1.0,  // 左上 x, y, z
+        1.0, -1.0, -1.0,  // 右下 x, y, z
+        -1.0, -1.0, -1.0, // 左下 x, y, z
+        // 背面
+        -1.0, 1.0, -1.0,  // 右上 x, y, z
+        1.0, 1.0, -1.0,   // 左上 x, y, z
+        -1.0, -1.0, -1.0, // 右下 x, y, z
+        1.0, -1.0, -1.0   // 左下 x, y, z
     ];
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
     const faceColors = [
-        [1.0,  1.0,  1.0,  1.0],    // Front face: white
-        [1.0,  0.0,  0.0,  1.0],    // left face: red
-        [0.0,  1.0,  0.0,  1.0],    // right face: green
-        [0.0,  0.0,  1.0,  1.0],    // top face: blue
-        [1.0,  1.0,  0.0,  1.0],    // bottom face: yellow
-        [0.0,  1.0,  1.0,  1.0],    // back face: purple
+        [1.0,  1.0,  1.0,  1.0],    // 前面: 白色
+        [1.0,  0.0,  0.0,  1.0],    // 左面: 红色
+        [0.0,  1.0,  0.0,  1.0],    // 右面: 绿色
+        [0.0,  0.0,  1.0,  1.0],    // 顶面: 蓝色
+        [1.0,  1.0,  0.0,  1.0],    // 底面: 黄色
+        [0.0,  1.0,  1.0,  1.0]     // 背面: 紫色
     ];
 
-    // Convert the array of colors into a table for all the vertices.
-
+    // 将颜色数组转换为所有顶点
     var colors = [];
 
     for (var j = 0; j < faceColors.length; ++j) {
         const c = faceColors[j];
 
-    // Repeat each color four times for the four vertices of the face
+        // 重复四次，一个面有四个角
         colors = colors.concat(c, c, c, c);
     }
 
@@ -198,15 +174,11 @@ function initBuffers(gl) {
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
-    // Build the element array buffer; this specifies the indices
-    // into the vertex arrays for each face's vertices.
+    //此阵列将每个面定义为两个三角形，使用
+    //指定顶点数组的索引，以指定每个三角形的位置。
 
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-    // This array defines each face as two triangles, using the
-    // indices into the vertex array to specify each triangle's
-    // position.
 
     /**
      * 长方形逆时针渲染
@@ -216,8 +188,10 @@ function initBuffers(gl) {
      *  |        |
      *  1 ------ 2
      * 左下     右下
+     * 
+     * 对照上面的顶点坐标从而得到下面的三角形顶点顺序数据
      */
-    const indices = [
+     const indices = [
         0,  1,  3,      0,  2,  3,    // front
         4,  5,  7,      4,  6,  7,    // back
         8,  9,  11,     8,  10, 11,   // top
@@ -226,53 +200,11 @@ function initBuffers(gl) {
         20, 21, 23,     20, 22, 23,   // left
     ];
 
-    // Now send the element array to GL
-
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
         new Uint16Array(indices), gl.STATIC_DRAW);
 
-    // Set up the normals for the vertices, so that we can compute lighting.
-    const normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    const vertexNormals = [
-        // front face
-        1.0, 1.0, 1.0, // 右上 x, y, z
-        1.0, -1.0, 1.0, // 右下 x, y, z
-        -1.0, 1.0, 1.0, // 左上 x, y, z
-        -1.0, -1.0, 1.0, // 左下 x, y, z
-        // left face
-        -1.0, 1.0, 1.0, // 右上
-        -1.0, -1.0, 1.0, // 右下
-        -1.0, 1.0, -1.0, // 左上
-        -1.0, -1.0, -1.0, // 左下
-        // right face
-        1.0, 1.0, -1.0, // 右上
-        1.0, -1.0, -1.0, // 右下
-        1.0, 1.0, 1.0, // 左上
-        1.0, -1.0, 1.0, // 左下
-        // top face
-        -1.0, 1.0, 1.0, // 右上
-        -1.0, 1.0, -1.0, // 右下
-        1.0, 1.0, 1.0, // 左上
-        1.0, 1.0, -1.0, // 左下
-        // bottom face
-        1.0, -1.0, 1.0, // 右上
-        1.0, -1.0, -1.0, // 右下
-        -1.0, -1.0, 1.0, // 左上
-        -1.0, -1.0, -1.0, // 左下
-        // back face
-        -1.0, 1.0, -1.0, // 右上
-        -1.0, -1.0, -1.0, // 右下
-        1.0, 1.0, -1.0, // 左上
-        1.0, -1.0, -1.0, // 左下
-    ];
-    
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals),
-                    gl.STATIC_DRAW);
-
     return {
         position: positionBuffer,
-        normal: normalBuffer,
         color: colorBuffer,
         indices: indexBuffer
     };
@@ -319,14 +251,10 @@ function drawScene(gl, programInfo, buffers) {
     
     mat4.translate(modelViewMatrix,     // destination matrix
                    modelViewMatrix,     // matrix to translate
-                   [-0.0, 0.0, -6.0]);  // amount to translate
+                   [0.0, 0.0, -6.0]);  // amount to translate
 
     // 旋转 x, y, z, 旋转中心点
-    mat4.rotate(modelViewMatrix, modelViewMatrix, squareRotation, [1, 1, 1]);
-
-    const normalMatrix = mat4.create();
-    mat4.invert(normalMatrix, modelViewMatrix);
-    mat4.transpose(normalMatrix, normalMatrix);
+    mat4.rotate(modelViewMatrix, modelViewMatrix, squareRotation, [0, 1, 1]);
   
     // Tell WebGL how to pull out the positions from the position
     // buffer into the vertexPosition attribute.
@@ -368,29 +296,6 @@ function drawScene(gl, programInfo, buffers) {
         gl.enableVertexAttribArray(
             programInfo.attribLocations.vertexColor);
     }
-
-    // Tell WebGL how to pull out the normals from
-    // the normal buffer into the vertexNormal attribute.
-    {
-        const numComponents = 3;
-        const type = gl.FLOAT;
-        const normalize = false;
-        const stride = 0;
-        const offset = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normal);
-        gl.vertexAttribPointer(
-            programInfo.attribLocations.vertexNormal,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset);
-        gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
-    }
-
-  
-    // Tell WebGL which indices to use to index the vertices
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
     
     // Tell WebGL to use our program when drawing
   
@@ -405,19 +310,6 @@ function drawScene(gl, programInfo, buffers) {
         programInfo.uniformLocations.modelViewMatrix,
         false,
         modelViewMatrix);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.normalMatrix,
-        false,
-        normalMatrix);
-
-    const worldMatrix = mat4.create();
-
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.worldLocation, false,
-        worldMatrix);
-
-    // 设置光源
-    gl.uniform3fv(programInfo.uniformLocations.lightWorldPosition, [0, 0, 1]);
   
     {
         const vertexCount = 36;
